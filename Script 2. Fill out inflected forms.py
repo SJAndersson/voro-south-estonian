@@ -1,61 +1,80 @@
+#2025-02-01
+#This reads in forms with audio
+#It inflects the forms based on the template in the dictionary
+#For example:
+#ahnõq|kaal,-kaala,-.kaala
+#becomes
+#ahnõqkaal,ahnõqkaala,ahnõq.kaala
+
 s = []
 
-with open("1. Audio, no alt, no dot.txt", encoding = "utf-8") as f:
+with open("1. Audio.txt", encoding = "utf-8") as f:
 
     s = f.read().split("\n")
 
-entries = []
+#Only two lines don't have a space, I'm getting rid of them
+s = [line for line in s if " " in line]
+
+#The word/inflections is everything before the first space
+s = [line[:line.index(" ")] for line in s]
+
+output = []
+stem = 0
 
 for line in s:
 
-    if line:
+    #There are four categories of lines based on a 2x2:
+    #Is there a pipe symbol?
+    #Is there a dash?
 
-        hasSpace = bool(" " in line)
-        hasComma = bool("," in line)
-        headword = ""
+    #No, no:
+    #aaḿ,aami,.aami
+    #Processing needed: NONE
 
-        if hasSpace and not hasComma:
+    #No, yes:
+    #aadoḿ,-i,-it
+    #Processing needed: fill in first form as stem
 
-            headword = line[:line.index(" ")]
+    #Yes, no:
+    #aloma|nõ
+    #Processing needed: get rid of pipe
 
-        elif hasComma and not hasSpace:
+    #Yes, yes:
+    #ahnõq|kaal,-kaala,-.kaala
+    #Processing needed: fill in stem from first form, get rid of pipe
 
-            headword = line[:line.index(",")]
+    if "|" in line and "-" not in line:
 
-        elif hasComma and hasSpace:
+        #e.g.: aloma|nõ
+        output.append(line.replace("|", ""))
 
-            headword = line[:min(line.index(" "), line.index(","))]
+    elif "-" in line:
 
-        else:
+        #A small number of prefixes are listed in the dictionary, e.g.:
+        #keedi-
+        #We do not keep these since they're not whole words
+        if "," not in line:
 
             continue
 
-        if "1" in line:
+        stem = line[:line.index(",")]
 
-            inflections = line[:line.index("1")]
+        if "|" in stem:
 
-            #Get rid of forms where the audio might contain multiple
-            #sets of pronunciations
-            if " e " not in inflections:
-            
-                stem = headword
+            #e.g.: ahnõq|kaal,-kaala,-.kaala
+            stem = stem[:stem.rfind("|")]
 
-                if "|" in line:
+        #e.g.:
+        #aadoḿ,-i,-it
+        #ahnõq|kaal,-kaala,-.kaala
+        output.append(line.replace("-", stem).replace("|", ""))
 
-                    stem = headword[:headword.rfind("|")]
+    else:
 
-                inflections = inflections.replace("-", stem + "|")
+        #e.g.: aaḿ,aami,.aami
+        output.append(line)
 
-                entries.append(inflections)           
-
-        else:
-
-            #This if statement removes I think in total 2 words which
-            #are inflected but don't have an inflection class listed.
-            if "-" not in line:
-
-                entries.append(headword)       
-
+#Write to file
 with open("2. Inflected forms.txt", mode = "w", encoding = "utf-8") as f:
 
-    f.write("\n".join(entries).replace(",", ""))
+    f.write("\n".join(output).replace(",", " "))
